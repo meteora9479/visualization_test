@@ -2,9 +2,14 @@ require'cudnn'
 local SpatialDeconvolution, parent = torch.class('cudnn.SpatialDeconvolution', 'cudnn.SpatialConvolution')
 
 
-function SpatialDeconvolution:__init( convLayer, reconstruction_size )
+function SpatialDeconvolution:__init( convLayer, reconstruction_size, firstDeconv )
     assert( torch.typename(convLayer) == 'cudnn.SpatialConvolution', 'Input should be cudnn.SpatialConvolution()')
-    parent.__init(self, convLayer.nOutputPlane, convLayer.nInputPlane, convLayer.kW, convLayer.kH, convLayer.dW, 
+    local deconvInputPlane = 1
+    if firstDeconv == true then 
+        deconvInputPlane = convLayer.nOutputPlane
+    end
+    
+    parent.__init(self, deconvInputPlane, convLayer.nInputPlane, convLayer.kW, convLayer.kH, convLayer.dW, 
                   convLayer.dH, convLayer.padW, convLayer.padH, convLayer.groups)
     self:reset() 
     self.reconstruction_size = reconstruction_size
