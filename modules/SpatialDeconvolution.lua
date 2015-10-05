@@ -29,7 +29,7 @@ function SpatialDeconvolution:updateOutput(input)
     local stride_size = self.dH
     local padding_size = (self.reconstruction_size - (input:size(2) * stride_size))/2
     
-    local n=input:size(3)
+    local n=input:size(2)
     local x=stride_size
 
     -- Scatter     contributed by TingFan
