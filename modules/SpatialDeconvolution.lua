@@ -32,23 +32,25 @@ function SpatialDeconvolution:updateOutput(input)
     local n=input:size(2)
     local x=stride_size
 
-    -- Scatter     contributed by TingFan
-    local idx=torch.LongTensor(n*n,1):cuda()
-    local counter=1;
-    for i=1,n*x,x do
-        for j=1,n*x,x do     
-            idx[counter]=(i-1+padding_size)*(n*x+padding_size*2) + j + padding_size
-            counter=counter+1;
+    if self.reconstruction_size ~= input:size(2) then
+        -- Scatter     contributed by TingFan
+        local idx=torch.LongTensor(n*n,1):cuda()
+        local counter=1;
+        for i=1,n*x,x do
+            for j=1,n*x,x do     
+                idx[counter]=(i-1+padding_size)*(n*x+padding_size*2) + j + padding_size
+                counter=counter+1;
+            end
         end
-    end
 
-    local total_size = (n*x+padding_size*2)*(n*x+padding_size*2)
-    for i=1,self.nInputPlane do
-        local m=torch.zeros(n*x+padding_size*2,n*x+padding_size*2):cuda()
-        m:view(total_size,1):scatter(1,idx,input[i]:view(n*n,1))
-        conv_scat_fm[i] = m
-    end    
-          
+        local total_size = (n*x+padding_size*2)*(n*x+padding_size*2)
+        for i=1,self.nInputPlane do
+            local m=torch.zeros(n*x+padding_size*2,n*x+padding_size*2):cuda()
+            m:view(total_size,1):scatter(1,idx,input[i]:view(n*n,1))
+            conv_scat_fm[i] = m
+        end    
+    end  
+        
     -- Deconv
     for i=1, self.nInputPlane do
         for j=1, self.nOutputPlane do
