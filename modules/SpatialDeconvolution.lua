@@ -1,4 +1,5 @@
-require'cudnn'
+require 'cudnn'
+require 'image'
 local SpatialDeconvolution, parent = torch.class('cudnn.SpatialDeconvolution', 'cudnn.SpatialConvolution')
 
 
@@ -18,6 +19,7 @@ end
 
 
 function SpatialDeconvolution:updateOutput(input)
+    -- input is conv_fm ( total_fm x kH x kW ) 
     --print(self.normalDeconv)
     local deconv_output = self.nInputPlane
     local total_deconv = self.nInputPlane
@@ -41,26 +43,38 @@ function SpatialDeconvolution:updateOutput(input)
     
     local n=input:size(2)
     local x=stride_size
-
+    
     if self.reconstruction_size ~= input:size(2) then
         -- Scatter     contributed by TingFan
         local idx=torch.LongTensor(n*n,1):cuda()
         local counter=1;
-        for i=1,n*x,x do
-            for j=1,n*x,x do     
-                idx[counter]=(i-1+padding_size)*(n*x+padding_size*2) + j + padding_size
+        for i=x,n*x,x do
+            for j=x,n*x,x do
+                idx[counter]=(i+math.floor(padding_size))*(n*x+padding_size*2) + j + math.floor(padding_size)
                 counter=counter+1;
             end
         end
 
         local total_size = (n*x+padding_size*2)*(n*x+padding_size*2)
         for i=1,total_deconv do
+            local fm_index = i
+            if self.neuron_num ~= 0 then
+                 fm_index = self.neuron_num
+            end
+            
             local m=torch.zeros(n*x+padding_size*2,n*x+padding_size*2):cuda()
-            m:view(total_size,1):scatter(1,idx,input[i]:view(n*n,1))
+            print(#input)
+            print(n)
+            print(fm_index)
+            print(input[fm_index])
+            local output = input[fm_index]:view(n*n,1)
+            print(output)
+            m:view(total_size,1):scatter(1,idx,output)
             conv_scat_fm[i] = m
         end    
     end  
-        
+    
+    itorch.image(conv_scat_fm[1])
     -- Deconv
     if self.normal_deconv == false then
         for i=1, total_deconv do
@@ -71,7 +85,8 @@ function SpatialDeconvolution:updateOutput(input)
                 end
 
                 local fm = conv_scat_fm[i]
-                deconv.weight = self.weight[{ {weight_index}, {j}, {}, {} }]:transpose(3, 4):contiguous()
+                --deconv.weight = self.weight[{ {weight_index}, {j}, {}, {} }]:transpose(3, 4):contiguous()
+                deconv.weight = image.hflip( image.vflip(self.weight[weight_index][j]:float())):cuda()
                 local deconv_result = deconv:forward(fm:view(1, self.reconstruction_size, self.reconstruction_size)):cuda()
                 -- BGR to RGB
                 if self.nOutputPlane==3 then
@@ -82,8 +97,10 @@ function SpatialDeconvolution:updateOutput(input)
             end
         end
     else
-        for j=1, self.nOutputPlane do 
-            deconv.weight = self.weight[{ {}, {j}, {}, {} }]:transpose(3, 4):contiguous()
+        for j=1, self.nOutputPlane do
+            local fm = conv_scat_fm[1]
+            --deconv.weight = self.weight[{ {}, {j}, {}, {} }]:transpose(3, 4):contiguous()
+            deconv.weight = image.hflip( image.vflip(self.weight[weight_index][j]:float())):cuda()
             local deconv_result = deconv:forward(fm:view(1, self.reconstruction_size, self.reconstruction_size)):cuda()
             -- BGR to RGB
             if self.nOutputPlane==3 then
