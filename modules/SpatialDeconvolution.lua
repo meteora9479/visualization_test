@@ -11,6 +11,11 @@ function SpatialDeconvolution:__init( convLayer, reconstruction_size, neuron_num
     
     self.normal_deconv = normal_deconv or false
     self.neuron_num = neuron_num or 0
+    if self.neuron_num == true then
+       self.neuron_num = 0 
+       self.normal_deconv = true
+    end
+    
     self.reconstruction_size = reconstruction_size
     self.weight=convLayer.weight
     self.gradWeight=convLayer.gradWeight    
@@ -63,18 +68,18 @@ function SpatialDeconvolution:updateOutput(input)
             end
             
             local m=torch.zeros(n*x+padding_size*2,n*x+padding_size*2):cuda()
-            print(#input)
-            print(n)
-            print(fm_index)
-            print(input[fm_index])
             local output = input[fm_index]:view(n*n,1)
-            print(output)
             m:view(total_size,1):scatter(1,idx,output)
             conv_scat_fm[i] = m
-        end    
-    end  
-    
-    itorch.image(conv_scat_fm[1])
+        end      
+    else
+        if self.neuron_num ~= 0 then
+            conv_scat_fm[{{1},{},{}}] = input[{{self.neuron_num},{},{}}]
+        else
+            conv_scat_fm = input:cuda()
+        end
+    end
+        
     -- Deconv
     if self.normal_deconv == false then
         for i=1, total_deconv do
@@ -86,7 +91,7 @@ function SpatialDeconvolution:updateOutput(input)
 
                 local fm = conv_scat_fm[i]
                 --deconv.weight = self.weight[{ {weight_index}, {j}, {}, {} }]:transpose(3, 4):contiguous()
-                deconv.weight = image.hflip( image.vflip(self.weight[weight_index][j]:float())):cuda()
+                deconv.weight = image.hflip( image.vflip(self.weight[weight_index][j]:float())):cuda():contiguous()
                 local deconv_result = deconv:forward(fm:view(1, self.reconstruction_size, self.reconstruction_size)):cuda()
                 -- BGR to RGB
                 if self.nOutputPlane==3 then
@@ -97,18 +102,36 @@ function SpatialDeconvolution:updateOutput(input)
             end
         end
     else
-        for j=1, self.nOutputPlane do
-            local fm = conv_scat_fm[1]
-            --deconv.weight = self.weight[{ {}, {j}, {}, {} }]:transpose(3, 4):contiguous()
-            deconv.weight = image.hflip( image.vflip(self.weight[weight_index][j]:float())):cuda()
-            local deconv_result = deconv:forward(fm:view(1, self.reconstruction_size, self.reconstruction_size)):cuda()
-            -- BGR to RGB
-            if self.nOutputPlane==3 then
-                deconv_fm[{ {1}, {3-(j-1)}, {}, {} }] = deconv_result
-            else
-                deconv_fm[{ {1}, {j}, {}, {} }] = deconv_result
+        local deconv_normal = cudnn.SpatialConvolution( self.nInputPlane, self.nOutputPlane, self.kW, self.kH, 1, 1, 
+                                                        math.floor(self.kW/2), math.floor(self.kH/2), self.group):cuda() 
+        deconv_normal.weight = torch.CudaTensor( self.nOutputPlane, self.nInputPlane, self.kW, self.kH )
+        for i=1, self.nInputPlane do
+            for j=1, self.nOutputPlane do
+                deconv_normal.weight[j][i] = image.hflip( image.vflip(self.weight[i][j]:float())):cuda():contiguous()
+                --deconv_normal.weight[j][i] = self.weight[{ {i}, {j}, {}, {} }]:transpose(3, 4):contiguous()
             end
         end
+          
+        deconv_fm = deconv_normal:forward(conv_scat_fm):cuda()
+        -- BGR to RGB
+--         if self.nOutputPlane==3 then
+--           local temp = deconv_fm:clone()
+--           deconv_fm[{1,{},{}}] = temp[{3,{},{}}]
+--           deconv_fm[{3,{},{}}] = temp[{1,{},{}}]   
+--         end
+            
+--         for j=1, self.nOutputPlane do
+--             local fm = conv_scat_fm[1]
+--             --deconv.weight = self.weight[{ {}, {j}, {}, {} }]:transpose(3, 4):contiguous()
+--             deconv.weight = image.hflip( image.vflip(self.weight[][j]:float())):cuda()
+--             local deconv_result = deconv:forward(fm:view(1, self.reconstruction_size, self.reconstruction_size)):cuda()
+--             -- BGR to RGB
+--             if self.nOutputPlane==3 then
+--                 deconv_fm[{ {1}, {3-(j-1)}, {}, {} }] = deconv_result
+--             else
+--                 deconv_fm[{ {1}, {j}, {}, {} }] = deconv_result
+--             end
+--         end
     end   
      
     cutorch.synchronize()    
