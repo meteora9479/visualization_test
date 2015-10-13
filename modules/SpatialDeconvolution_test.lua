@@ -17,7 +17,16 @@ function SpatialDeconvolution:__init( convLayer, reconstruction_size, neuron_num
     end
     
     self.reconstruction_size = reconstruction_size
-    self.weight=convLayer.weight
+    self.weight=convLayer.weight:clone()
+    
+--     for i=1, self.nOutputPlane do
+--         for j=1, self.nInputPlane do
+--             self.weight[j][i]=image.hflip( image.vflip(self.weight[j][i]:float())):cuda():contiguous()
+--         end
+--     end
+    
+    flip = function(m,d) return m:index(d,torch.range(m:size(d),1,-1):long())end
+    self.weight = flip(flip(self.weight,4),3)
     self.gradWeight=convLayer.gradWeight    
 end
 
@@ -93,7 +102,7 @@ function SpatialDeconvolution:updateOutput(input)
 
                 local fm = conv_scat_fm[i]
                 --deconv.weight = self.weight[{ {weight_index}, {j}, {}, {} }]:transpose(3, 4):contiguous()
-                deconv.weight = image.hflip( image.vflip(self.weight[weight_index][j]:float())):cuda():contiguous()
+                deconv.weight = self.weight[weight_index][j]
                 local deconv_result = deconv:forward(fm:view(1, self.reconstruction_size, self.reconstruction_size)):cuda()
                 -- BGR to RGB
                 if self.nOutputPlane==3 then
@@ -109,7 +118,7 @@ function SpatialDeconvolution:updateOutput(input)
         deconv_normal.weight = torch.CudaTensor( self.nOutputPlane, self.nInputPlane, self.kW, self.kH )
         for i=1, self.nInputPlane do
             for j=1, self.nOutputPlane do
-                deconv_normal.weight[j][i] = image.hflip( image.vflip(self.weight[i][j]:float())):cuda():contiguous()
+                deconv_normal.weight[j][i] = self.weight[i][j]
                 --deconv_normal.weight[j][i] = self.weight[{ {i}, {j}, {}, {} }]:transpose(3, 4):contiguous()
             end
         end
