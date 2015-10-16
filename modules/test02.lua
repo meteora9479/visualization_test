@@ -1,0 +1,26 @@
+require('cutorch')
+require('cunn')
+require('unn')
+
+local conv1 = nn.SpatialConvolutionMM(3,8,3,3,1,1,1,1)
+local pool1 = unn.DualSpatialMaxPooling(2,2,2,2)
+local pool2 = unn.DualSpatialMaxUnpooling()
+local conv2 = nn.SpatialConvolutionMM(8,3,3,3,1,1,1,1)
+local net = nn.Sequential()
+net:add(conv1)
+net:add(pool1)
+net:add(pool2)
+net:add(conv2)
+net:cuda()
+pool2:setDualModule(pool1)
+local x = torch.CudaTensor(3,8,8)
+print('x:size = ' .. tostring(x:size()))
+local y = net:forward(x)
+print('y:size = ' .. tostring(y:size()))
+local z = net:backward(x,y)
+print('z:size = ' .. tostring(z:size()))
+
+--test Jacobian
+local jac = nn.Jacobian
+local err = jac.testJacobian(net, x, nil, nil, 1e-1)
+print(err)
