@@ -1,11 +1,11 @@
 require('cutorch')
 require('cunn')
-require('unn')
+require('dcnn')
 
 torch.setdefaulttensortype('torch.FloatTensor')
 
-local pool1 = unn.DualSpatialMaxPooling(2,2,2,2)
-local pool2 = unn.DualSpatialMaxUnpooling()
+local pool1 = dcnn.DualSpatialMaxPooling(2,2,2,2)
+local pool2 = dcnn.DualSpatialMaxUnpooling()
 pool1:cuda()
 pool2:cuda()
 -- must set dual moule after cuda

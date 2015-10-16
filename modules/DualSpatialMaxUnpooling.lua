@@ -1,4 +1,4 @@
-local DualSpatialMaxUnpooling, parent = torch.class('unn.DualSpatialMaxUnpooling', 'nn.Module')
+local DualSpatialMaxUnpooling, parent = torch.class('dcnn.DualSpatialMaxUnpooling', 'nn.Module')
 
 function DualSpatialMaxUnpooling:__init()
 	parent.__init(self)
@@ -14,12 +14,12 @@ function DualSpatialMaxUnpooling:resizeOutput(dualInput)
 end
 
 function DualSpatialMaxUnpooling:updateOutput(input)
-	input.unn.DualSpatialMaxUnpooling_updateOutput(self.dualModule.indices, input, self.output)
+	input.dcnn.DualSpatialMaxUnpooling_updateOutput(self.dualModule.indices, input, self.output)
 	return self.output
 end
 
 function DualSpatialMaxUnpooling:updateGradInput(input, gradOutput)
-	input.unn.DualSpatialMaxUnpooling_updateGradInput(self.dualModule.indices, input, gradOutput, self.gradInput)
+	input.dcnn.DualSpatialMaxUnpooling_updateGradInput(self.dualModule.indices, input, gradOutput, self.gradInput)
 	return self.gradInput
 end
 

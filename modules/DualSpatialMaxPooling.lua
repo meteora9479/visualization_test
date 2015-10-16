@@ -1,4 +1,4 @@
-local DualSpatialMaxPooling, parent = torch.class('unn.DualSpatialMaxPooling', 'nn.Module')
+local DualSpatialMaxPooling, parent = torch.class('dcnn.DualSpatialMaxPooling', 'nn.Module')
 
 function DualSpatialMaxPooling:__init(kW, kH, dW, dH, padW, padH)
 	parent.__init(self)
@@ -21,12 +21,12 @@ function DualSpatialMaxPooling:updateOutput(input)
 	if self.dualModule then
 		self.dualModule:resizeOutput(input)
 	end
-	input.unn.DualSpatialMaxPooling_updateOutput(self, input)
+	input.dcnn.DualSpatialMaxPooling_updateOutput(self, input)
 	return self.output
 end
 
 function DualSpatialMaxPooling:updateGradInput(input, gradOutput)
-	input.unn.DualSpatialMaxPooling_updateGradInput(self, input, gradOutput)
+	input.dcnn.DualSpatialMaxPooling_updateGradInput(self, input, gradOutput)
 	return self.gradInput
 end
 

@@ -23,7 +23,7 @@ __global__ void DualMaxUnpoolForward(
 	}
 }
 
-static int unn_DualSpatialMaxUnpooling_updateOutput(lua_State *L) {
+static int dcnn_DualSpatialMaxUnpooling_updateOutput(lua_State *L) {
 	THCState *state = getCutorchState(L);
 	THCudaTensor *indices = (THCudaTensor *)luaT_checkudata(L, 1, "torch.CudaTensor");
 	THCudaTensor *input = (THCudaTensor *)luaT_checkudata(L, 2, "torch.CudaTensor");
@@ -107,7 +107,7 @@ __global__ void DualMaxUnpoolBackward(
 	}
 }
 
-static int unn_DualSpatialMaxUnpooling_updateGradInput(lua_State *L) {
+static int dcnn_DualSpatialMaxUnpooling_updateGradInput(lua_State *L) {
 	THCState *state = getCutorchState(L);
 	THCudaTensor *indices = (THCudaTensor *)luaT_checkudata(L, 1, "torch.CudaTensor");
 	THCudaTensor *input = (THCudaTensor *)luaT_checkudata(L, 2, "torch.CudaTensor");
@@ -163,14 +163,14 @@ static int unn_DualSpatialMaxUnpooling_updateGradInput(lua_State *L) {
 	return 1;
 }
 
-static const struct luaL_Reg unn_DualSpatialMaxUnpooling__ [] = {
-	{"DualSpatialMaxUnpooling_updateOutput", unn_DualSpatialMaxUnpooling_updateOutput},
-	{"DualSpatialMaxUnpooling_updateGradInput", unn_DualSpatialMaxUnpooling_updateGradInput},
+static const struct luaL_Reg dcnn_DualSpatialMaxUnpooling__ [] = {
+	{"DualSpatialMaxUnpooling_updateOutput", dcnn_DualSpatialMaxUnpooling_updateOutput},
+	{"DualSpatialMaxUnpooling_updateGradInput", dcnn_DualSpatialMaxUnpooling_updateGradInput},
 	{NULL, NULL}
 };
 
-void unn_DualSpatialMaxUnpooling_init(lua_State *L) {
+void dcnn_DualSpatialMaxUnpooling_init(lua_State *L) {
 	luaT_pushmetatable(L, "torch.CudaTensor");
-	luaT_registeratname(L, unn_DualSpatialMaxUnpooling__, "unn");
+	luaT_registeratname(L, dcnn_DualSpatialMaxUnpooling__, "dcnn");
 	lua_pop(L,1);
 }

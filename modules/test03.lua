@@ -1,10 +1,10 @@
 require('cutorch')
 require('cunn')
-require('unn')
+require('dcnn')
 
 local conv1 = nn.SpatialConvolutionMM(3,8,3,3,1,1,1,1)
-local pool1 = unn.DualSpatialMaxPooling(2,2,2,2)
-local pool2 = unn.DualSpatialMaxUnpooling()
+local pool1 = dcnn.DualSpatialMaxPooling(2,2,2,2)
+local pool2 = dcnn.DualSpatialMaxUnpooling()
 local conv2 = nn.SpatialConvolutionMM(8,3,3,3,1,1,1,1)
 local encoder = nn.Sequential()
 encoder:add(conv1)

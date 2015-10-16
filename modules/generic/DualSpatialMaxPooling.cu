@@ -46,7 +46,7 @@ __global__ void DualMaxPoolForward(
 	}
 }
 
-static int unn_DualSpatialMaxPooling_updateOutput(lua_State *L) {
+static int dcnn_DualSpatialMaxPooling_updateOutput(lua_State *L) {
 	THCState *state = getCutorchState(L);
 	int kW = luaT_getfieldcheckint(L, 1, "kW");
 	int kH = luaT_getfieldcheckint(L, 1, "kH");
@@ -140,7 +140,7 @@ __global__ void DualMaxPoolBackward(
 	}
 }
 
-static int unn_DualSpatialMaxPooling_updateGradInput(lua_State *L) {
+static int dcnn_DualSpatialMaxPooling_updateGradInput(lua_State *L) {
 	THCState *state = getCutorchState(L);
 	int kW = luaT_getfieldcheckint(L, 1, "kW");
 	int kH = luaT_getfieldcheckint(L, 1, "kH");
@@ -202,14 +202,14 @@ static int unn_DualSpatialMaxPooling_updateGradInput(lua_State *L) {
 	return 1;
 }
 
-static const struct luaL_Reg unn_DualSpatialMaxPooling__[] = {
-	{ "DualSpatialMaxPooling_updateOutput", unn_DualSpatialMaxPooling_updateOutput },
-	{ "DualSpatialMaxPooling_updateGradInput", unn_DualSpatialMaxPooling_updateGradInput },
+static const struct luaL_Reg dcnn_DualSpatialMaxPooling__[] = {
+	{ "DualSpatialMaxPooling_updateOutput", dcnn_DualSpatialMaxPooling_updateOutput },
+	{ "DualSpatialMaxPooling_updateGradInput", dcnn_DualSpatialMaxPooling_updateGradInput },
 	{ NULL, NULL }
 };
 
-void unn_DualSpatialMaxPooling_init(lua_State *L) {
+void dcnn_DualSpatialMaxPooling_init(lua_State *L) {
 	luaT_pushmetatable(L, "torch.CudaTensor");
-	luaT_registeratname(L, unn_DualSpatialMaxPooling__, "unn");
+	luaT_registeratname(L, dcnn_DualSpatialMaxPooling__, "dcnn");
 	lua_pop(L, 1);
 }

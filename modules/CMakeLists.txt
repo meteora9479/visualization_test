@@ -31,7 +31,8 @@ INCLUDE_DIRECTORIES("${Torch_INSTALL_INCLUDE}/TH")
 
 LINK_DIRECTORIES("${Torch_INSTALL_LIB}")
 
-FILE(GLOB src-cuda generic/*.cu)
+FILE(GLOB src-cuda generic/*.cu *.cu)
+MESSAGE(${src-cuda})
 
 FILE(GLOB luasrc *.lua)
 
