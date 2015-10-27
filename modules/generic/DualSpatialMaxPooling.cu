@@ -78,8 +78,8 @@ static int dcnn_DualSpatialMaxPooling_updateOutput(lua_State *L) {
 	luaL_argcheck(L, iwidth >= kW - padW && iheight >= kH - padH, 2, "input image smaller than kernel size");
 	luaL_argcheck(L, kW / 2 >= padW && kH / 2 >= padH, 2, "pad should be smaller than half of kernel size");
 
-	owidth = floor(float(iwidth - kW + 2*padW) / float(dW)) + 1;
-	oheight = floor(float(iheight - kH + 2*padH) / float(dH)) + 1;
+	owidth = ceil(float(iwidth - kW + 2*padW) / float(dW)) + 1;
+	oheight = ceil(float(iheight - kH + 2*padH) / float(dH)) + 1;
 
 	/* get contiguous input */
 	input = THCudaTensor_newContiguous(state, input);
@@ -177,8 +177,8 @@ static int dcnn_DualSpatialMaxPooling_updateGradInput(lua_State *L) {
 		iwidth = input->size[3];
 	}
 
-	owidth = floor(float(iwidth - kW + 2*padW) / float(dW)) + 1;
-	oheight = floor(float(iheight - kH + 2*padH) / float(dH)) + 1;
+	owidth = ceil(float(iwidth - kW + 2*padW) / float(dW)) + 1;
+	oheight = ceil(float(iheight - kH + 2*padH) / float(dH)) + 1;
 
 	int count = THCudaTensor_nElement(state, indices);
 	DualMaxPoolBackward <<< GET_BLOCKS(count), CUDA_NUM_THREADS, 0, THCState_getCurrentStream(state) >>> (

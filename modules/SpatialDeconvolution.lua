@@ -18,13 +18,7 @@ function SpatialDeconvolution:__init( convLayer, reconstruction_size, neuron_num
     
     self.reconstruction_size = reconstruction_size
     self.weight=convLayer.weight:clone()
-    
---     for i=1, self.nOutputPlane do
---         for j=1, self.nInputPlane do
---             self.weight[j][i]=image.hflip( image.vflip(self.weight[j][i]:float())):cuda():contiguous()
---         end
---     end
-    
+        
     flip = function(m,d) return m:index(d,torch.range(m:size(d),1,-1):long())end
     self.weight = flip(flip(self.weight,4),3)
     self.gradWeight=convLayer.gradWeight    
@@ -33,8 +27,6 @@ end
 
 
 function SpatialDeconvolution:updateOutput(input)
-    -- input is conv_fm ( total_fm x kH x kW ) 
-    --print(self.normalDeconv)
     local deconv_output = self.nInputPlane
     local total_deconv = self.nInputPlane
     if self.neuron_num ~= 0 then
@@ -91,6 +83,7 @@ function SpatialDeconvolution:updateOutput(input)
     end
         
     print('==> Scatter Time elapsed: ' .. timer:time().real .. ' seconds')
+    timer2 = torch.Timer()
     -- Deconv
     if self.normal_deconv == false then
         for i=1, total_deconv do
@@ -114,37 +107,21 @@ function SpatialDeconvolution:updateOutput(input)
         end
     else
         local deconv_normal = cudnn.SpatialConvolution( self.nInputPlane, self.nOutputPlane, self.kW, self.kH, 1, 1, 
-                                                        math.floor(self.kW/2), math.floor(self.kH/2), self.group):cuda() 
+                                                        math.floor(self.kW/2), math.floor(self.kH/2), self.group):cuda()         
         deconv_normal.weight = torch.CudaTensor( self.nOutputPlane, self.nInputPlane, self.kW, self.kH )
-        for i=1, self.nInputPlane do
-            for j=1, self.nOutputPlane do
-                deconv_normal.weight[j][i] = self.weight[i][j]
-                --deconv_normal.weight[j][i] = self.weight[{ {i}, {j}, {}, {} }]:transpose(3, 4):contiguous()
-            end
-        end
-          
+        
+        timer2 = torch.Timer()
+        deconv_normal.weight = self.weight:transpose(1, 2):contiguous()          
         deconv_fm = deconv_normal:forward(conv_scat_fm):cuda()
         -- BGR to RGB
---         if self.nOutputPlane==3 then
---           local temp = deconv_fm:clone()
---           deconv_fm[{1,{},{}}] = temp[{3,{},{}}]
---           deconv_fm[{3,{},{}}] = temp[{1,{},{}}]   
---         end
-            
---         for j=1, self.nOutputPlane do
---             local fm = conv_scat_fm[1]
---             --deconv.weight = self.weight[{ {}, {j}, {}, {} }]:transpose(3, 4):contiguous()
---             deconv.weight = image.hflip( image.vflip(self.weight[][j]:float())):cuda()
---             local deconv_result = deconv:forward(fm:view(1, self.reconstruction_size, self.reconstruction_size)):cuda()
---             -- BGR to RGB
---             if self.nOutputPlane==3 then
---                 deconv_fm[{ {1}, {3-(j-1)}, {}, {} }] = deconv_result
---             else
---                 deconv_fm[{ {1}, {j}, {}, {} }] = deconv_result
---             end
---         end
+        if self.nOutputPlane==3 then
+          local temp = deconv_fm:clone()
+          deconv_fm[{1,{},{}}] = temp[{3,{},{}}]
+          deconv_fm[{3,{},{}}] = temp[{1,{},{}}]   
+        end
     end   
-     
+    
+    print('==> Deconv Time elapsed: ' .. timer2:time().real .. ' seconds')
     cutorch.synchronize()    
     return deconv_fm
 end 
