@@ -50,7 +50,7 @@ function SpatialDeconvolution:updateOutput(input)
     local n=input:size(2)
     local x=stride_size
     
-    timer = torch.Timer()
+    --timer = torch.Timer()
     if self.reconstruction_size ~= input:size(2) then
         -- Scatter     contributed by TingFan
         local idx=torch.LongTensor(n*n,1):cuda()
@@ -82,8 +82,8 @@ function SpatialDeconvolution:updateOutput(input)
         end
     end
         
-    print('==> Scatter Time elapsed: ' .. timer:time().real .. ' seconds')
-    timer2 = torch.Timer()
+    --print('==> Scatter Time elapsed: ' .. timer:time().real .. ' seconds')
+    --timer2 = torch.Timer()
     -- Deconv
     if self.normal_deconv == false then
         for i=1, total_deconv do
@@ -121,8 +121,12 @@ function SpatialDeconvolution:updateOutput(input)
         end
     end   
     
-    print('==> Deconv Time elapsed: ' .. timer2:time().real .. ' seconds')
-    cutorch.synchronize()    
+    --print('==> Deconv Time elapsed: ' .. timer2:time().real .. ' seconds')
+    cutorch.synchronize()
+    if deconv_fm:dim() == 4 then
+        return deconv_fm[1] 
+    end    
+    
     return deconv_fm
 end 
 
