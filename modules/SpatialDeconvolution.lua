@@ -12,9 +12,15 @@ function SpatialDeconvolution:__init( convLayer, reconstruction_size, neuron_num
     self.normal_deconv = normal_deconv or false
     self.neuron_num = neuron_num or 0
     if self.neuron_num == true then
-       self.neuron_num = 0 
-       self.normal_deconv = true
+        self.neuron_num = 0 
+        self.normal_deconv = true
     end
+    
+    if self.neuron_num == false then
+        self.neuron_num = 0 
+        self.normal_deconv = false
+    end 
+    
     
     self.reconstruction_size = reconstruction_size
     self.weight=convLayer.weight:clone()
@@ -29,15 +35,20 @@ end
 function SpatialDeconvolution:updateOutput(input)
     local deconv_output = self.nInputPlane
     local total_deconv = self.nInputPlane
-    if self.neuron_num ~= 0 then
+    if torch.type(self.neuron_num)~='torch.IntTensor' and self.neuron_num ~= 0 then
         total_deconv = 1
         deconv_output = 1
     end    
     
+    if torch.type(self.neuron_num) == 'torch.IntTensor' then
+        total_deconv = self.neuron_num:size(1)
+        deconv_output = 1
+    end
+    
     if normal_deconv == true then
         deconv_output = 1
     end
-        
+            
     local deconv_fm = torch.CudaTensor( deconv_output, self.nOutputPlane, self.reconstruction_size, 
                                          self.reconstruction_size):zero():cuda()
     local deconv = cudnn.SpatialConvolution(1, 1, self.kW, self.kH, 1, 1, 
@@ -50,6 +61,7 @@ function SpatialDeconvolution:updateOutput(input)
     local n=input:size(2)
     local x=stride_size
     
+   
     --timer = torch.Timer()
     if self.reconstruction_size ~= input:size(2) then
         -- Scatter     contributed by TingFan
@@ -65,18 +77,27 @@ function SpatialDeconvolution:updateOutput(input)
         local total_size = (n*x+padding_size*2)*(n*x+padding_size*2)
         for i=1,total_deconv do
             local fm_index = i
-            if self.neuron_num ~= 0 then
-                 fm_index = self.neuron_num
-            end
             
+            if torch.type(self.neuron_num) ~= 'torch.IntTensor' then
+                if self.neuron_num ~= 0 then
+                     fm_index = self.neuron_num
+                end
+            else
+                fm_index = self.neuron_num[i]
+            end
+                
             local m=torch.zeros(n*x+padding_size*2,n*x+padding_size*2):cuda()
             local output = input[fm_index]:view(n*n,1)
             m:view(total_size,1):scatter(1,idx,output)
             conv_scat_fm[i] = m
         end      
     else
-        if self.neuron_num ~= 0 then
+        if torch.type(self.neuron_num) ~= 'torch.IntTensor' and self.neuron_num ~= 0 then
             conv_scat_fm[{{1},{},{}}] = input[{{self.neuron_num},{},{}}]
+        elseif torch.type(self.nuuron_num) == 'torch.IntTensor' then
+            for i=1,self.nuuron_num:size(1) do
+                conv_scat_fm[i] = input[{{self.neuron_num[i]},{},{}}]
+            end
         else
             conv_scat_fm = input:cuda()
         end
@@ -86,23 +107,40 @@ function SpatialDeconvolution:updateOutput(input)
     --timer2 = torch.Timer()
     -- Deconv
     if self.normal_deconv == false then
-        for i=1, total_deconv do
-            for j=1, self.nOutputPlane do
-                local weight_index = i
-                if self.neuron_num ~= 0 then
-                    weight_index = self.neuron_num
-                end
+        if torch.type(self.neuron_num) ~= 'torch.IntTensor' then
+            for i=1, total_deconv do
+                for j=1, self.nOutputPlane do
+                    local weight_index = i
+                    if self.neuron_num ~= 0 then
+                        weight_index = self.neuron_num
+                    end
 
-                local fm = conv_scat_fm[i]
-                --deconv.weight = self.weight[{ {weight_index}, {j}, {}, {} }]:transpose(3, 4):contiguous()
-                deconv.weight = self.weight[weight_index][j]
-                local deconv_result = deconv:forward(fm:view(1, self.reconstruction_size, self.reconstruction_size)):cuda()
-                -- BGR to RGB
-                if self.nOutputPlane==3 then
-                    deconv_fm[{ {i}, {3-(j-1)}, {}, {} }] = deconv_result
-                else
-                    deconv_fm[{ {i}, {j}, {}, {} }] = deconv_result
-                end            
+                    local fm = conv_scat_fm[i]
+                    deconv.weight = self.weight[weight_index][j]
+                    local deconv_result = deconv:forward(fm:view(1, self.reconstruction_size, self.reconstruction_size)):cuda()
+                    -- BGR to RGB
+                    if self.nOutputPlane==3 then
+                        deconv_fm[{ {i}, {3-(j-1)}, {}, {} }] = deconv_result
+                    else
+                        deconv_fm[{ {i}, {j}, {}, {} }] = deconv_result
+                    end            
+                end
+            end      
+        else
+            for i=1, total_deconv do
+                for j=1, self.nOutputPlane do
+                    local weight_index = i
+                    weight_index = self.neuron_num[i]
+                    local fm = conv_scat_fm[i]
+                    deconv.weight = self.weight[weight_index][j]
+                    local deconv_result = deconv:forward(fm:view(1, self.reconstruction_size, self.reconstruction_size)):cuda()
+                    -- BGR to RGB
+                    if self.nOutputPlane==3 then
+                        deconv_fm[{ {1}, {3-(j-1)}, {}, {} }] = deconv_fm[{ {1}, {3-(j-1)}, {}, {} }] + deconv_result
+                    else
+                        deconv_fm[{ {1}, {j}, {}, {} }] = deconv_fm[{ {1}, {j}, {}, {} }] + deconv_result
+                    end                       
+                end
             end
         end
     else
@@ -123,7 +161,7 @@ function SpatialDeconvolution:updateOutput(input)
     
     --print('==> Deconv Time elapsed: ' .. timer2:time().real .. ' seconds')
     cutorch.synchronize()
-    if deconv_fm:dim() == 4 then
+    if deconv_fm:dim() == 4 and deconv_output==1 then
         return deconv_fm[1] 
     end    
     
