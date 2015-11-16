@@ -171,7 +171,6 @@ function SpatialDeconvolution:updateOutput(input)
         
     cutorch.synchronize()
     if deconv_fm:dim() == 4 and deconv_output==1 then
-        print(deconv_fm:size())
         -- print('dim == 4' )
         if self.nOutputPlane==3 then
           local temp = deconv_fm:clone()
