@@ -1,4 +1,3 @@
-
 local Test_SpatialDeconvolution, parent = torch.class('Test_SpatialDeconvolution', 'cudnn.SpatialConvolution')
 
 function Test_SpatialDeconvolution:__init( convLayer, reconstruction_size, neuron_num )
@@ -39,7 +38,7 @@ function Test_SpatialDeconvolution:__init( convLayer, reconstruction_size, neuro
                                                         math.floor(self.kW/2), math.floor(self.kH/2)):cuda()         
     self.deconv_normal.weight = self.weight:transpose(1, 2):contiguous():cuda()    
         
-    print( convLayer )
+    print( convLayer:__tostring__() )
     print('deconv layer has been built !')
 end
 
@@ -115,7 +114,7 @@ function Test_SpatialDeconvolution:updateOutput(input)
         
     --print('==> Scatter Time elapsed: ' .. timer:time().real .. ' seconds')
     --timer2 = torch.Timer()
-    local test_return = nil
+    -- local test_return = nil
     
     -- Deconv
     if self.normal_deconv == false then
@@ -129,7 +128,7 @@ function Test_SpatialDeconvolution:updateOutput(input)
                 local fm = conv_scat_fm[i]                    
                 local deconv_result = self.deconv[weight_index]:forward(fm:view(1, self.reconstruction_size, 
                                                                         self.reconstruction_size):cuda())
-                deconv_fm = deconv_result:contiguous():cuda()
+                deconv_fm[i] = deconv_result:contiguous():cuda()
 --                 --test deconv_result
 --                 if j==3 then
 --                     -- test_return = deconv.weight[1][1]:clone()
@@ -164,21 +163,28 @@ function Test_SpatialDeconvolution:updateOutput(input)
     end   
     
     --print('==> Deconv Time elapsed: ' .. timer2:time().real .. ' seconds')
+        
+    cutorch.synchronize()
+    if deconv_fm:dim() == 4 and deconv_output==1 then
+        print(deconv_fm:size())
+        -- print('dim == 4' )
+        if self.nOutputPlane==3 then
+          local temp = deconv_fm:clone()
+          deconv_fm[{{},1,{},{}}] = temp[{{},3,{},{}}]
+          deconv_fm[{{},3,{},{}}] = temp[{{},1,{},{}}]   
+        end        
+        
+        self.output = deconv_fm[1]
+        return deconv_fm[1]
+    end    
     
     -- BGR to RGB
     if self.nOutputPlane==3 then
       local temp = deconv_fm:clone()
       deconv_fm[{1,{},{}}] = temp[{3,{},{}}]
       deconv_fm[{3,{},{}}] = temp[{1,{},{}}]   
-    end    
+    end     
     
-    cutorch.synchronize()
-    if deconv_fm:dim() == 4 and deconv_output==1 then
-        -- print('dim == 4' )
-        self.output = deconv_fm[1]
-        return deconv_fm[1]
-    end    
-        
     self.output = deconv_fm
     return deconv_fm
 end 
