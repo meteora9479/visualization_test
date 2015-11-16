@@ -162,9 +162,11 @@ function SpatialDeconvolution:updateOutput(input)
     --print('==> Deconv Time elapsed: ' .. timer2:time().real .. ' seconds')
     cutorch.synchronize()
     if deconv_fm:dim() == 4 and deconv_output==1 then
+        self.output = deconv_fm[1] 
         return deconv_fm[1] 
     end    
     
+    self.output = deconv_fm
     return deconv_fm
 end 
 
