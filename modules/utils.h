@@ -13,4 +13,7 @@ THCState* getCutorchState(lua_State* L);
 void dcnn_DualSpatialMaxPooling_init(lua_State *L);
 void dcnn_DualSpatialMaxUnpooling_init(lua_State *L);
 
+void dcnn_Threshold_init(lua_State *L);
+
+
 #endif

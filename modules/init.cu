@@ -14,6 +14,8 @@ int luaopen_libdcnn(lua_State *L) {
 
 	dcnn_DualSpatialMaxPooling_init(L);
 	dcnn_DualSpatialMaxUnpooling_init(L);
+    dcnn_Threshold_init(L);
+
 
 	return 1;
 }

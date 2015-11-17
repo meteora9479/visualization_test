@@ -1,11 +1,11 @@
-#ifndef DCNN_COMMON_H
-#define DCNN_COMMON_H
+#ifndef CUNN_COMMON_H
+#define CUNN_COMMON_H
 
 // CUDA: grid stride looping
 #define CUDA_KERNEL_LOOP(i, n) for (int i = blockIdx.x * blockDim.x + threadIdx.x; i < (n); i += blockDim.x * gridDim.x)
 
 // Use 1024 threads per block, which requires cuda sm_2x or above
-const int CUDA_NUM_THREADS = 128;
+const int CUDA_NUM_THREADS = 1024;
 
 // CUDA: number of blocks for threads.
 inline int GET_BLOCKS(const int N) {
