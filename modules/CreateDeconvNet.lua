@@ -46,8 +46,8 @@ function dcnn:CreateDeconvNet( net, unpooling_layers, input_img, layer_num, neur
             deconvNet:add( unpooling_layers[unpooling_idx])
             
         elseif torch.typename( net:get(i)) == 'cudnn.ReLU' then
-            deconvNet:add( cudnn.ReLU(true) )
-            
+            deconvNet:add(dcnn.GuidedReLU(net:get(i-1)))
+            --deconvNet:add(cudnn.ReLU(true))
         else
             print( torch.typename( net:get(i))..' This type of layer is not supported !')
         end

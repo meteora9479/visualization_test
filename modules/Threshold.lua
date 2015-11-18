@@ -4,6 +4,7 @@ function Threshold:__init(th,v,ip)
 	parent.__init(self,th,v,ip)
 
 	self.recOutput = torch.Tensor()
+    self:cuda()
 end
 
 function Threshold:updateRecOutput(input, recInput)

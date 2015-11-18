@@ -11,7 +11,7 @@ include('ReplaceDualPoolingModule.lua' )
 include('CreateDeconvNet.lua' )
 
 include('Threshold.lua')
-include('ReLU.lua')
+include('GuidedReLU.lua')
 
 
 
